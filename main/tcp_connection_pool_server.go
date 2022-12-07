@@ -12,6 +12,8 @@ func main() {
 		log.Fatalf("listen failed, err(%+v)", err)
 	}
 
+	fmt.Println("server is listening...")
+
 	var count = 0
 	for {
 		c, err := l.Accept()
@@ -23,7 +25,7 @@ func main() {
 
 		_ = c
 
-		fmt.Printf("create %d connection.", count)
+		fmt.Printf("create %d connection\n", count)
 	}
 
 }

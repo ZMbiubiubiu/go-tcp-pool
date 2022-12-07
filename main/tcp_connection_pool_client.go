@@ -1,19 +1,21 @@
 package main
 
 import (
-	pool "gogo/SyntaxStudy/TCP/pool"
+	"fmt"
 	"log"
 	"time"
+
+	"go-tcp-pool/pool"
 )
 
 func main() {
-	tcpPool, err := pool.CreateTcpConnPool("localhost", 8080, pool.WithMaxOpenCount(8), pool.WithMaxIdleCount(8))
+	tcpPool, err := pool.CreateTcpConnPool("localhost", 8080, pool.WithMaxOpenCount(10), pool.WithMaxIdleCount(10))
 	if err != nil {
 		log.Fatalln("create pool failed.")
 	}
 
 	for i := 0; i < 100; i++ {
-		go func() {
+		go func(i int) {
 			conn, err := tcpPool.Get()
 			if err != nil {
 				log.Print(err)
@@ -21,10 +23,12 @@ func main() {
 
 			conn.Write([]byte("hello"))
 
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(1_000 * time.Millisecond)
+
+			fmt.Printf("finish %d task.\n", i+1)
 
 			tcpPool.Put(conn)
-		}()
+		}(i)
 	}
 
 	select {}

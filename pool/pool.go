@@ -49,10 +49,11 @@ func (p *TcpConnPool) Put(c *TcpConn) {
 		p.numOpen--
 	} else {
 		p.idleConns[c.id] = c
+		fmt.Printf("put one tcp connection.\n")
 	}
 }
 
-// Get retrieves a TCP connection
+// Get 从连接池获取一个 TCP 连接
 func (p *TcpConnPool) Get() (*TcpConn, error) {
 	p.mu.Lock()
 
@@ -62,7 +63,6 @@ func (p *TcpConnPool) Get() (*TcpConn, error) {
 			// 控线连接减少1个
 			delete(p.idleConns, conn.id)
 			p.mu.Unlock()
-
 			return conn, nil
 		}
 	}
@@ -82,8 +82,10 @@ func (p *TcpConnPool) Get() (*TcpConn, error) {
 		return newTcpConn, nil
 	}
 
-	// otherwise, we queue this request
-	// 一定要为指针类型，否则就算处理完了，你也不知道
+	p.mu.Unlock()
+
+	// 否则，我们就得等待其他连接空闲
+	// tips: 一定要为指针类型，否则就算处理完了，你也不知道
 	req := &connRequest{
 		connChan: make(chan *TcpConn, 1),
 		errChan:  make(chan error, 1),
@@ -91,11 +93,8 @@ func (p *TcpConnPool) Get() (*TcpConn, error) {
 
 	p.requestChan <- req
 
-	p.mu.Unlock()
-
-	// waits for either
-	// 1.Request fulfilled, or
-	// 2.An error is returned
+	// 等待空闲连接，否则
+	// 失败
 	select {
 	case tcpConn := <-req.connChan:
 		return tcpConn, nil
@@ -112,7 +111,7 @@ func (p *TcpConnPool) handleConnectionRequest() {
 			requestDone = false
 			hasTimeout  = false
 
-			// start a 3-second timeout
+			// 最多等待3s
 			timeoutChan = time.After(3 * time.Second)
 		)
 
@@ -121,7 +120,6 @@ func (p *TcpConnPool) handleConnectionRequest() {
 				break
 			}
 			select {
-			// request timeout
 			case <-timeoutChan:
 				hasTimeout = true
 				req.errChan <- errors.New("connection request timeout")
@@ -134,10 +132,11 @@ func (p *TcpConnPool) handleConnectionRequest() {
 				numIdle := len(p.idleConns)
 				if numIdle > 0 {
 					for _, conn := range p.idleConns {
-						p.mu.Unlock()
 						delete(p.idleConns, conn.id)
+						p.mu.Unlock()
 						req.connChan <- conn
 						requestDone = true
+
 						break
 					}
 				} else if p.numOpen < p.maxOpenCount {
@@ -158,6 +157,8 @@ func (p *TcpConnPool) handleConnectionRequest() {
 				}
 			}
 		}
+
+		fmt.Printf("handleConnectionRequest retrive one tcp.--------------------------------\n")
 	}
 }
 

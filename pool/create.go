@@ -2,6 +2,7 @@ package pool
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -26,6 +27,8 @@ func CreateTcpConnPool(host string, port int, options ...Option) (*TcpConnPool, 
 	for _, option := range options {
 		option(pool)
 	}
+
+	fmt.Printf("CreateTcpConnPool :pool config:%v\n", pool)
 
 	// 将永久运行的处理函数，放在工厂函数里面
 	go pool.handleConnectionRequest()
