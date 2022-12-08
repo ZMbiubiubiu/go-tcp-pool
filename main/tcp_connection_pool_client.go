@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	tcpPool, err := pool.CreateTcpConnPool("localhost", 8080, pool.WithMaxOpenCount(10), pool.WithMaxIdleCount(10))
+	tcpPool, err := pool.CreateTcpConnPool(pool.WithMaxOpenCount(10), pool.WithMaxIdleCount(10))
 	if err != nil {
 		log.Fatalln("create pool failed.")
 	}

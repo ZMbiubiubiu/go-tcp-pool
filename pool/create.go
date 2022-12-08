@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 )
@@ -10,13 +9,11 @@ type Option func(pool *TcpConnPool)
 
 // 采用Go语言功能选项模式
 
-func CreateTcpConnPool(host string, port int, options ...Option) (*TcpConnPool, error) {
-	if host == "" || port == 0 {
-		return nil, errors.New("invalid parameters")
-	}
+func CreateTcpConnPool(options ...Option) *TcpConnPool {
+
 	pool := &TcpConnPool{
-		host:         host,
-		port:         port,
+		host:         "localhost",
+		port:         8080,
 		mu:           sync.Mutex{},
 		idleConns:    make(map[string]*TcpConn),
 		maxOpenCount: 10,
@@ -33,7 +30,19 @@ func CreateTcpConnPool(host string, port int, options ...Option) (*TcpConnPool, 
 	// 将永久运行的处理函数，放在工厂函数里面
 	go pool.handleConnectionRequest()
 
-	return pool, nil
+	return pool
+}
+
+func WithHost(host string) Option {
+	return func(pool *TcpConnPool) {
+		pool.host = host
+	}
+}
+
+func WithPort(port int) Option {
+	return func(pool *TcpConnPool) {
+		pool.port = port
+	}
 }
 
 func WithMaxOpenCount(num int) Option {
